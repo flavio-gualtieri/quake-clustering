@@ -12,23 +12,26 @@ import plotly.express as px
 # ------------------------------
 # 1. EarthquakeData Class
 # ------------------------------
+
 class EarthquakeData:
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, file):
+        self.file = file  # Accept UploadedFile object
         self.df = None
         self.N = 0
 
     def load_data(self):
-        if self.filename.endswith(".csv"):
-            self.df = pd.read_csv(self.filename)
+        if self.file.name.endswith(".csv"):
+            self.df = pd.read_csv(self.file)
             self.df = self.df[["ID", "Event Time", "Latitude", "Longitude", "Magnitude"]].dropna().drop_duplicates(
                 subset=["ID"])
             self.df["Event Time"] = pd.to_datetime(self.df["Event Time"])
-        else:
-            self.df = pd.read_excel(self.filename)
+        elif self.file.name.endswith(".xlsx"):
+            self.df = pd.read_excel(self.file)
             self.df = self.df[["id", "Event Time", "Latitude", "Longitude", "Magnitude"]].dropna().drop_duplicates(
                 subset=["id"])
             self.df.rename(columns={'id': 'ID'}, inplace=True)
+        else:
+            raise ValueError("Unsupported file format. Please upload a CSV or Excel file.")
         
         self.df = self.df.sample(frac=1).reset_index(drop=True)
         self.df["Year"] = self.df["Event Time"].dt.year
@@ -36,6 +39,7 @@ class EarthquakeData:
 
     def get_data(self):
         return self.df, self.N
+
 
 
 # ------------------------------
