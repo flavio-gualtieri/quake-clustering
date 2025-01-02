@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 import pandas as pd
 from quakes import EarthquakeData, DistanceCalculator, TimeCalculator, EarthquakeGrouper, EarthquakeAnalyzer, EarthquakeVisualizer
@@ -36,6 +38,7 @@ if uploaded_file is not None:
             T_matrix = time_calculator.get_times()
         
         # Grouping
+        st.write("### Clustering Parameters")
         set_dist = st.slider("Select Distance Threshold (km)", 1, 100, 50)
         set_time_minutes = st.slider("Select Time Threshold (minutes)", 1, 1440, 60)  # Max 24 hours
         set_time = set_time_minutes * 60  # Convert to seconds
@@ -54,11 +57,19 @@ if uploaded_file is not None:
         st.write(f"Number of clusters: {len(groupings)}")
         st.write(f"Core Earthquakes: {len(analyzer.cores)}")
         
+        # Display Cluster Column in Sample Data
+        st.write("### Sample Data with Clusters")
+        st.dataframe(df.head())
+        
         # Visualization
         st.write("### Visualization")
-        visualizer = EarthquakeVisualizer(df)
-        visualizer.plot_clusters()
+        try:
+            visualizer = EarthquakeVisualizer(df)
+            visualizer.plot_clusters()
+        except ValueError as e:
+            st.error(f"Visualization Error: {e}")
         
+        # Download Processed Data
         st.write("### Download Processed Data")
         st.download_button(
             label="Download Processed CSV",

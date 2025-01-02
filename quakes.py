@@ -137,18 +137,30 @@ class EarthquakeAnalyzer:
         self.afters = {}
 
     def analyze_groups(self):
-        for group in self.groupings:
-            mini_df = self.df.loc[group].sort_values(by="Event Time")
-            core_idx = mini_df["Magnitude"].idxmax()
-            core_id = mini_df.at[core_idx, "ID"]  # Safely get the core earthquake ID
+        cluster_col = [""] * len(self.df)  # Create an empty cluster column
+
+        for cluster_idx, group in enumerate(self.groupings):
+            mini_df = self.df.loc[group].sort_values(by="Event Time").reset_index(drop=True)
             
+            # Get the core earthquake
+            core_idx = mini_df["Magnitude"].idxmax()
+            core_id = mini_df.at[core_idx, "ID"]
+
             self.cores.append(core_idx)
 
-            fores = mini_df.loc[:core_idx - 1, "ID"].tolist() if core_idx > 0 else []
-            afters = mini_df.loc[core_idx + 1:, "ID"].tolist() if core_idx < len(mini_df) - 1 else []
+            # Identify foreshocks and aftershocks
+            fores = mini_df.iloc[:core_idx]["ID"].tolist() if core_idx > 0 else []
+            afters = mini_df.iloc[core_idx + 1:]["ID"].tolist() if core_idx < len(mini_df) - 1 else []
 
-            self.fores[core_id] = fores
-            self.afters[core_id] = afters
+            self.fores[str(core_id)] = fores
+            self.afters[str(core_id)] = afters
+
+            # Assign cluster label to all earthquakes in the current group
+            cluster_label = f"Cluster {cluster_idx + 1}"
+            for idx in group:
+                cluster_col[idx] = cluster_label
+
+        self.df["Cluster"] = cluster_col  # Add Cluster column to the DataFrame
 
 
 # ------------------------------
@@ -159,6 +171,11 @@ class EarthquakeVisualizer:
         self.df = dataframe
 
     def plot_clusters(self):
+        # Ensure Cluster column exists
+        if "Cluster" not in self.df.columns:
+            raise ValueError("The 'Cluster' column is missing from the DataFrame. Ensure clustering was performed correctly.")
+
+        # Define colors for categories
         colors = []
         for cat in self.df["Earthquake category"]:
             if "after" in cat:
@@ -169,15 +186,23 @@ class EarthquakeVisualizer:
                 colors.append(px.colors.sequential.Inferno[5])
             else:
                 colors.append(px.colors.sequential.Inferno[7])
-        
+
         fig = go.Figure(data=go.Scattergeo(
             lon=self.df["Longitude"],
             lat=self.df["Latitude"],
-            text=self.df[["Cluster", "Magnitude", "Event Time", "Earthquake category"]],
+            text=self.df[["Cluster", "Magnitude", "Event Time", "Earthquake category"]].astype(str).agg('<br>'.join, axis=1),
             mode='markers',
-            marker=dict(color=colors)
+            marker=dict(color=colors, size=8),
         ))
         fig.update_geos(projection_type="orthographic")
+        fig.update_layout(
+            title="Earthquake Cluster Visualization",
+            geo=dict(
+                showland=True,
+                landcolor="rgb(243, 243, 243)",
+                subunitcolor="rgb(255, 255, 255)"
+            )
+        )
         fig.show()
 
 
