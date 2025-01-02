@@ -14,7 +14,7 @@ This project provides a web application for analyzing earthquake data using **St
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/earthquake-analysis.git
+   git clone https://github.com/flavio-gualtieri/earthquake-analysis.git
    cd earthquake-analysis
 2. Install dependencies:
    ```bash
