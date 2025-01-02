@@ -139,14 +139,16 @@ class EarthquakeAnalyzer:
     def analyze_groups(self):
         for group in self.groupings:
             mini_df = self.df.loc[group].sort_values(by="Event Time")
-            core = mini_df["Magnitude"].idxmax()
-            self.cores.append(core)
+            core_idx = mini_df["Magnitude"].idxmax()
+            core_id = mini_df.at[core_idx, "ID"]  # Safely get the core earthquake ID
+            
+            self.cores.append(core_idx)
 
-            fores = mini_df.loc[:core - 1]["ID"].tolist() if core > 0 else []
-            afters = mini_df.loc[core + 1:]["ID"].tolist() if core < len(mini_df) - 1 else []
+            fores = mini_df.loc[:core_idx - 1, "ID"].tolist() if core_idx > 0 else []
+            afters = mini_df.loc[core_idx + 1:, "ID"].tolist() if core_idx < len(mini_df) - 1 else []
 
-            self.fores[mini_df["ID"][core]] = fores
-            self.afters[mini_df["ID"][core]] = afters
+            self.fores[core_id] = fores
+            self.afters[core_id] = afters
 
 
 # ------------------------------

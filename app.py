@@ -37,7 +37,8 @@ if uploaded_file is not None:
         
         # Grouping
         set_dist = st.slider("Select Distance Threshold (km)", 1, 100, 50)
-        set_time = st.slider("Select Time Threshold (seconds)", 3600, 86400, 3600)
+        set_time_minutes = st.slider("Select Time Threshold (minutes)", 1, 1440, 60)  # Max 24 hours
+        set_time = set_time_minutes * 60  # Convert to seconds
         
         with st.spinner('Grouping earthquakes...'):
             grouper = EarthquakeGrouper(D_matrix, T_matrix, N)
