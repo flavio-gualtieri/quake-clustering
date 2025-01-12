@@ -10,29 +10,44 @@ import plotly.express as px
 
 
 # ------------------------------
-# 1. EarthquakeData Class
+# 1. EarthquakeData Class:
+#       Handles data loading, preprocessing, and column mapping.
+#       Ensures the dataset has all required fields after user-defined column mappings.
 # ------------------------------
-
 class EarthquakeData:
-    def __init__(self, file):
+    def __init__(self, file, column_mapping):
         self.file = file  # Accept UploadedFile object
+        self.column_mapping = column_mapping  # User-defined column mapping
         self.df = None
         self.N = 0
 
     def load_data(self):
+        # Read file based on extension
         if self.file.name.endswith(".csv"):
             self.df = pd.read_csv(self.file)
-            self.df = self.df[["ID", "Event Time", "Latitude", "Longitude", "Magnitude"]].dropna().drop_duplicates(
-                subset=["ID"])
-            self.df["Event Time"] = pd.to_datetime(self.df["Event Time"])
         elif self.file.name.endswith(".xlsx"):
             self.df = pd.read_excel(self.file)
-            self.df = self.df[["id", "Event Time", "Latitude", "Longitude", "Magnitude"]].dropna().drop_duplicates(
-                subset=["id"])
-            self.df.rename(columns={'id': 'ID'}, inplace=True)
         else:
             raise ValueError("Unsupported file format. Please upload a CSV or Excel file.")
         
+        # Rename columns based on user mapping
+        self.df = self.df.rename(columns=self.column_mapping)
+        
+        # Validate that all required columns are present
+        required_columns = ["Latitude", "Longitude", "Event Time", "Magnitude", "ID"]
+        missing_columns = [col for col in required_columns if col not in self.df.columns]
+        if missing_columns:
+            raise ValueError(f"Missing required columns after mapping: {missing_columns}")
+        
+        # Drop duplicates and NaN values
+        self.df = self.df[required_columns].dropna().drop_duplicates(subset=["ID"])
+
+        # Convert "Event Time" to datetime
+        self.df["Event Time"] = pd.to_datetime(self.df["Event Time"], errors="coerce")
+        if self.df["Event Time"].isna().any():
+            raise ValueError("Some rows have invalid 'Event Time' values.")
+
+        # Shuffle rows for randomness and add year column
         self.df = self.df.sample(frac=1).reset_index(drop=True)
         self.df["Year"] = self.df["Event Time"].dt.year
         self.N = len(self.df)
@@ -41,9 +56,10 @@ class EarthquakeData:
         return self.df, self.N
 
 
-
 # ------------------------------
-# 2. DistanceCalculator Class
+# 2. DistanceCalculator Class:
+#   Calculates the pairwise distance matrix between earthquake events
+#   based on their latitude and longitude coordinates.
 # ------------------------------
 class DistanceCalculator:
     def __init__(self, dataframe):
@@ -67,7 +83,9 @@ class DistanceCalculator:
 
 
 # ------------------------------
-# 3. TimeCalculator Class
+# 3. TimeCalculator Class:
+#   Calculates the pairwise time difference matrix between earthquake events
+#   based on their event timestamps.
 # ------------------------------
 class TimeCalculator:
     def __init__(self, dataframe):
@@ -90,7 +108,9 @@ class TimeCalculator:
 
 
 # ------------------------------
-# 4. EarthquakeGrouper Class
+# 4. EarthquakeGrouper Class:
+#   Groups earthquake events into clusters based on distance and time thresholds.
+#   Uses Breadth-First Search (BFS) for cluster identification.
 # ------------------------------
 class EarthquakeGrouper:
     def __init__(self, distance_matrix, time_matrix, N):
@@ -126,7 +146,9 @@ class EarthquakeGrouper:
 
 
 # ------------------------------
-# 5. EarthquakeAnalyzer Class
+# 5. EarthquakeAnalyzer Class:
+#   Analyzes earthquake clusters to identify core earthquakes,
+#  foreshocks, and aftershocks. Also assigns cluster labels.
 # ------------------------------
 class EarthquakeAnalyzer:
     def __init__(self, dataframe, groupings):
@@ -164,18 +186,18 @@ class EarthquakeAnalyzer:
 
 
 # ------------------------------
-# 6. EarthquakeVisualizer Class
+# 6. EarthquakeVisualizer Class:
+#   Visualizes earthquake clusters on a geographical map using Plotly.
+#   Includes hover information for each earthquake.
 # ------------------------------
 class EarthquakeVisualizer:
     def __init__(self, dataframe):
         self.df = dataframe
 
     def plot_clusters(self):
-        # Ensure Cluster column exists
         if "Cluster" not in self.df.columns:
             raise ValueError("The 'Cluster' column is missing from the DataFrame. Ensure clustering was performed correctly.")
 
-        # Define colors for categories
         colors = []
         for cat in self.df["Earthquake category"]:
             if "after" in cat:
@@ -210,7 +232,15 @@ class EarthquakeVisualizer:
 # Main Program
 # ------------------------------
 if __name__ == "__main__":
-    eq_data = EarthquakeData("earthquakes.csv")
+    column_mapping = {
+        "Latitude Column Name": "Latitude",
+        "Longitude Column Name": "Longitude",
+        "Event Time Column Name": "Event Time",
+        "Magnitude Column Name": "Magnitude",
+        "ID Column Name": "ID"
+    }
+
+    eq_data = EarthquakeData("earthquakes.csv", column_mapping)
     eq_data.load_data()
     df, N = eq_data.get_data()
 
