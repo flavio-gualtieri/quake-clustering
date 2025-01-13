@@ -195,27 +195,22 @@ class EarthquakeVisualizer:
         self.df = dataframe
 
     def plot_clusters(self):
-        if "Cluster" not in self.df.columns:
-            raise ValueError("The 'Cluster' column is missing from the DataFrame. Ensure clustering was performed correctly.")
+        if "Cluster" not in self.df.columns or "Cluster Color" not in self.df.columns:
+            raise ValueError("Required clustering columns are missing. Ensure clustering is performed first.")
 
-        colors = []
-        for cat in self.df["Earthquake category"]:
-            if "after" in cat:
-                colors.append(px.colors.sequential.Inferno[0])
-            elif "fore" in cat:
-                colors.append(px.colors.sequential.Inferno[3])
-            elif "core" in cat:
-                colors.append(px.colors.sequential.Inferno[5])
-            else:
-                colors.append(px.colors.sequential.Inferno[7])
+        fig = go.Figure()
 
-        fig = go.Figure(data=go.Scattergeo(
-            lon=self.df["Longitude"],
-            lat=self.df["Latitude"],
-            text=self.df[["Cluster", "Magnitude", "Event Time", "Earthquake category"]].astype(str).agg('<br>'.join, axis=1),
-            mode='markers',
-            marker=dict(color=colors, size=8),
-        ))
+        # Plot each cluster with its unique color
+        for cluster, group in self.df.groupby("Cluster"):
+            fig.add_trace(go.Scattergeo(
+                lon=group["Longitude"],
+                lat=group["Latitude"],
+                text=group[["Cluster", "Magnitude", "Event Time", "Earthquake category"]].astype(str).agg('<br>'.join, axis=1),
+                mode='markers',
+                marker=dict(size=8, color=group["Cluster Color"].iloc[0]),
+                name=cluster
+            ))
+
         fig.update_geos(projection_type="orthographic")
         fig.update_layout(
             title="Earthquake Cluster Visualization",
