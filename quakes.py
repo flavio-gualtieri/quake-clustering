@@ -14,12 +14,6 @@ import plotly.express as px
 # ------------------------------
 class EarthquakeData:
     def __init__(self, file, column_mapping):
-        """
-        Initialize with file and column mapping.
-        
-        :param file: Uploaded file (CSV/Excel).
-        :param column_mapping: Dictionary mapping user-selected columns to required fields.
-        """
         self.file = file  # Accept UploadedFile object
         self.column_mapping = column_mapping  # User-defined column mapping
         self.df = None
@@ -192,17 +186,20 @@ class EarthquakeVisualizer:
         if "Cluster" not in self.df.columns:
             raise ValueError("The 'Cluster' column is missing from the DataFrame. Ensure clustering was performed correctly.")
 
-        colors = []
-        for cat in self.df["Earthquake category"]:
-            if "after" in cat:
-                colors.append(px.colors.sequential.Inferno[0])
-            elif "fore" in cat:
-                colors.append(px.colors.sequential.Inferno[3])
-            elif "core" in cat:
-                colors.append(px.colors.sequential.Inferno[5])
-            else:
-                colors.append(px.colors.sequential.Inferno[7])
+        # Assign unique colors for each cluster
+        unique_clusters = self.df["Cluster"].unique()
+        cluster_colors = {cluster: px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)] 
+                          for i, cluster in enumerate(unique_clusters)}
 
+        # Set colors for each earthquake, with the core in red
+        colors = []
+        for _, row in self.df.iterrows():
+            if row["Earthquake category"] == "core":
+                colors.append("red")
+            else:
+                colors.append(cluster_colors[row["Cluster"]])
+
+        # Create the scatter plot
         fig = go.Figure(data=go.Scattergeo(
             lon=self.df["Longitude"],
             lat=self.df["Latitude"],
