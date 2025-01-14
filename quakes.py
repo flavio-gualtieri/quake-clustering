@@ -10,12 +10,16 @@ import plotly.express as px
 
 
 # ------------------------------
-# 1. EarthquakeData Class:
-#       Handles data loading, preprocessing, and column mapping.
-#       Ensures the dataset has all required fields after user-defined column mappings.
+# 1. EarthquakeData Class
 # ------------------------------
 class EarthquakeData:
     def __init__(self, file, column_mapping):
+        """
+        Initialize with file and column mapping.
+        
+        :param file: Uploaded file (CSV/Excel).
+        :param column_mapping: Dictionary mapping user-selected columns to required fields.
+        """
         self.file = file  # Accept UploadedFile object
         self.column_mapping = column_mapping  # User-defined column mapping
         self.df = None
@@ -57,9 +61,7 @@ class EarthquakeData:
 
 
 # ------------------------------
-# 2. DistanceCalculator Class:
-#   Calculates the pairwise distance matrix between earthquake events
-#   based on their latitude and longitude coordinates.
+# 2. DistanceCalculator Class
 # ------------------------------
 class DistanceCalculator:
     def __init__(self, dataframe):
@@ -83,9 +85,7 @@ class DistanceCalculator:
 
 
 # ------------------------------
-# 3. TimeCalculator Class:
-#   Calculates the pairwise time difference matrix between earthquake events
-#   based on their event timestamps.
+# 3. TimeCalculator Class
 # ------------------------------
 class TimeCalculator:
     def __init__(self, dataframe):
@@ -108,9 +108,7 @@ class TimeCalculator:
 
 
 # ------------------------------
-# 4. EarthquakeGrouper Class:
-#   Groups earthquake events into clusters based on distance and time thresholds.
-#   Uses Breadth-First Search (BFS) for cluster identification.
+# 4. EarthquakeGrouper Class
 # ------------------------------
 class EarthquakeGrouper:
     def __init__(self, distance_matrix, time_matrix, N):
@@ -146,9 +144,7 @@ class EarthquakeGrouper:
 
 
 # ------------------------------
-# 5. EarthquakeAnalyzer Class:
-#   Analyzes earthquake clusters to identify core earthquakes,
-#  foreshocks, and aftershocks. Also assigns cluster labels.
+# 5. EarthquakeAnalyzer Class
 # ------------------------------
 class EarthquakeAnalyzer:
     def __init__(self, dataframe, groupings):
@@ -186,31 +182,34 @@ class EarthquakeAnalyzer:
 
 
 # ------------------------------
-# 6. EarthquakeVisualizer Class:
-#   Visualizes earthquake clusters on a geographical map using Plotly.
-#   Includes hover information for each earthquake.
+# 6. EarthquakeVisualizer Class
 # ------------------------------
 class EarthquakeVisualizer:
     def __init__(self, dataframe):
         self.df = dataframe
 
     def plot_clusters(self):
-        if "Cluster" not in self.df.columns or "Cluster Color" not in self.df.columns:
-            raise ValueError("Required clustering columns are missing. Ensure clustering is performed first.")
+        if "Cluster" not in self.df.columns:
+            raise ValueError("The 'Cluster' column is missing from the DataFrame. Ensure clustering was performed correctly.")
 
-        fig = go.Figure()
+        colors = []
+        for cat in self.df["Earthquake category"]:
+            if "after" in cat:
+                colors.append(px.colors.sequential.Inferno[0])
+            elif "fore" in cat:
+                colors.append(px.colors.sequential.Inferno[3])
+            elif "core" in cat:
+                colors.append(px.colors.sequential.Inferno[5])
+            else:
+                colors.append(px.colors.sequential.Inferno[7])
 
-        # Plot each cluster with its unique color
-        for cluster, group in self.df.groupby("Cluster"):
-            fig.add_trace(go.Scattergeo(
-                lon=group["Longitude"],
-                lat=group["Latitude"],
-                text=group[["Cluster", "Magnitude", "Event Time", "Earthquake category"]].astype(str).agg('<br>'.join, axis=1),
-                mode='markers',
-                marker=dict(size=8, color=group["Cluster Color"].iloc[0]),
-                name=cluster
-            ))
-
+        fig = go.Figure(data=go.Scattergeo(
+            lon=self.df["Longitude"],
+            lat=self.df["Latitude"],
+            text=self.df[["Cluster", "Magnitude", "Event Time", "Earthquake category"]].astype(str).agg('<br>'.join, axis=1),
+            mode='markers',
+            marker=dict(color=colors, size=8),
+        ))
         fig.update_geos(projection_type="orthographic")
         fig.update_layout(
             title="Earthquake Cluster Visualization",
